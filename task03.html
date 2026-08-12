@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Field Quiz</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --board: #1e3a2c;
+    --board-deep: #17301f;
+    --card: #234a37;
+    --chalk: #eef2ea;
+    --chalk-dim: #a9bdb0;
+    --yellow: #f2d675;
+    --correct: #8fe0a4;
+    --wrong: #f2988a;
+    --line: rgba(238,242,234,0.22);
+    --line-soft: rgba(238,242,234,0.12);
+    --hand: 'Kalam', cursive;
+    --body: 'Work Sans', sans-serif;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.03), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.025), transparent 45%),
+      var(--board);
+    color: var(--chalk);
+    font-family: var(--body);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 28px 14px;
+  }
+
+  .app{ width:100%; max-width: 480px; }
+
+  /* ---------- Eyebrow ---------- */
+  .eyebrow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+
+  .eyebrow .title{
+    font-family: var(--hand);
+    font-size: 22px;
+    letter-spacing: .5px;
+    color: var(--chalk);
+  }
+
+  .counter{
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--chalk-dim);
+    text-transform: uppercase;
+  }
+
+  /* ---------- Tally progress ---------- */
+  .tally-row{
+    display:flex;
+    align-items:center;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 0 4px;
+    min-height: 28px;
+  }
+  .tally-group line{ stroke: var(--yellow); stroke-width: 2; stroke-linecap: round; }
+  .tally-empty{ color: var(--chalk-dim); font-size: 13px; }
+  .tally-label{ margin-left: auto; font-size: 11px; color: var(--chalk-dim); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ---------- Card ---------- */
+  .card{
+    background: var(--card);
+    border: 2px dashed var(--line);
+    border-radius: 16px 12px 18px 10px;
+    padding: 24px 22px;
+    box-shadow: 0 20px 46px -22px rgba(0,0,0,0.55);
+  }
+
+  .badge{
+    display:inline-block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--board-deep);
+    background: var(--yellow);
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  .prompt{
+    font-family: var(--hand);
+    font-size: 1.5rem;
+    line-height: 1.35;
+    margin-bottom: 20px;
+  }
+
+  .options{ display:flex; flex-direction:column; gap: 10px; }
+
+  .option{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 2px dashed var(--line-soft);
+    border-radius: 12px 10px 12px 9px;
+    cursor:pointer;
+    transition: border-color .15s, background .15s;
+    font-size: 15px;
+  }
+  .option:hover{ border-color: var(--line); }
+  .option.selected{
+    border-color: var(--yellow);
+    border-style: solid;
+    background: rgba(242,214,117,0.08);
+  }
+
+  .mark{
+    flex-shrink:0;
+    width: 22px; height: 22px;
+    border: 2px solid var(--chalk-dim);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--board-deep);
+    font-size: 13px;
+    font-weight:700;
+  }
+  .mark.radio{ border-radius: 50%; }
+  .mark.checkbox{ border-radius: 5px; }
+  .option.selected .mark{ background: var(--yellow); border-color: var(--yellow); }
+
+  .fill-input{
+    width:100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px dashed var(--line);
+    color: var(--chalk);
+    font-family: var(--hand);
+    font-size: 1.3rem;
+    padding: 8px 4px;
+    outline: none;
+  }
+  .fill-input:focus{ border-bottom-color: var(--yellow); }
+  .fill-hint{ font-size: 12px; color: var(--chalk-dim); margin-top: 8px; }
+
+  /* ---------- Palette ---------- */
+  .palette{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 4px 0;
+  }
+  .dot{
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2px dashed var(--line-soft);
+    background: transparent;
+    color: var(--chalk-dim);
+    font-family: var(--body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .dot.answered{ border-style: solid; border-color: var(--chalk-dim); color: var(--chalk); }
+  .dot.current{ border-color: var(--yellow); border-style: solid; color: var(--yellow); background: rgba(242,214,117,0.1); }
+
+  /* ---------- Nav ---------- */
+  .nav{ display:flex; gap: 10px; margin-top: 20px; }
+  button{
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 12px;
+    padding: 13px 16px;
+    border: 2px dashed var(--line);
+    background: transparent;
+    color: var(--chalk);
+    cursor:pointer;
+    transition: transform .08s, border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active{ transform: scale(.96); }
+  button:focus-visible{ outline: 2px solid var(--yellow); outline-offset:2px; }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn-secondary{ flex:0 0 auto; }
+  .btn-primary{
+    flex:1;
+    border-style: solid;
+    background: var(--yellow);
+    color: var(--board-deep);
+    border-color: var(--yellow);
+  }
+  .btn-primary:active{ background: #e0c15f; }
+  .btn-submit{
+    width:100%;
+    margin-top: 10px;
+    border-style: solid;
+    border-color: var(--line);
+    color: var(--chalk-dim);
+    font-size: 13px;
+  }
+
+  /* ---------- Results ---------- */
+  .results{ display:none; }
+  .results.show{ display:block; }
+  .quiz-view.hide{ display:none; }
+
+  .stamp-wrap{ display:flex; justify-content:center; margin: 6px 0 22px; }
+  .stamp{
+    width: 168px; height: 168px;
+    border-radius: 50%;
+    border: 3px dashed var(--yellow);
+    transform: rotate(-9deg);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-family: var(--hand);
+  }
+  .stamp.fail{ border-color: var(--wrong); }
+  .stamp .grade{ font-size: 2.6rem; font-weight:700; color: var(--yellow); line-height:1; }
+  .stamp.fail .grade{ color: var(--wrong); }
+  .stamp .frac{ font-size: 1rem; color: var(--chalk); margin-top: 4px; }
+  .stamp .word{ font-size: .75rem; letter-spacing: 2px; text-transform:uppercase; color: var(--chalk-dim); margin-top: 4px; }
+
+  .result-message{
+    font-family: var(--hand);
+    font-size: 1.2rem;
+    text-align:center;
+    margin-bottom: 20px;
+    color: var(--chalk);
+  }
+
+  .breakdown{ display:flex; flex-direction:column; gap: 10px; margin-bottom: 20px; }
+  .review-row{
+    border: 2px dashed var(--line-soft);
+    border-radius: 12px 10px 12px 9px;
+    padding: 12px 14px;
+  }
+  .review-top{ display:flex; gap:10px; align-items:flex-start; margin-bottom: 6px; }
+  .review-icon{
+    flex-shrink:0;
+    width: 20px; height:20px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 12px; font-weight:700;
+  }
+  .review-icon.correct{ background: var(--correct); color: var(--board-deep); }
+  .review-icon.wrong{ background: var(--wrong); color: var(--board-deep); }
+  .review-q{ font-size: 13.5px; line-height:1.4; }
+  .review-detail{ font-size: 12.5px; color: var(--chalk-dim); padding-left: 30px; line-height:1.6; }
+  .review-detail .your{ color: var(--chalk); }
+  .review-detail .correct-answer{ color: var(--correct); }
+
+  @media (max-width: 380px){
+    .card{ padding: 18px 16px; }
+    .prompt{ font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="eyebrow">
+    <span class="title">Field Quiz</span>
+    <span class="counter" id="counter">Q 1 / 8</span>
+  </div>
+
+  <div class="tally-row" id="tallyRow">
+    <span class="tally-label">Answered</span>
+  </div>
+
+  <div class="quiz-view" id="quizView">
+    <div class="card">
+      <span class="badge" id="typeBadge">Single Select</span>
+      <div class="prompt" id="prompt">Loading question…</div>
+      <div class="options" id="options"></div>
+    </div>
+
+    <div class="palette" id="palette"></div>
+
+    <div class="nav">
+      <button class="btn-secondary" id="prevBtn">← Prev</button>
+      <button class="btn-primary" id="nextBtn">Next →</button>
+    </div>
+    <button class="btn-submit" id="submitBtn">Submit quiz now</button>
+  </div>
+
+  <div class="results" id="resultsView">
+    <div class="stamp-wrap">
+      <div class="stamp" id="stamp">
+        <div class="grade" id="grade">A</div>
+        <div class="frac" id="scoreFrac">8/8</div>
+        <div class="word">Graded</div>
+      </div>
+    </div>
+    <div class="result-message" id="resultMessage">Nicely done!</div>
+    <div class="breakdown" id="breakdown"></div>
+    <button class="btn-primary" id="restartBtn" style="width:100%;">Retake Quiz</button>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------- Question bank ----------
+  const QUESTIONS = [
+    {
+      id: 'q1', type: 'single',
+      prompt: 'Which planet is known as the Red Planet?',
+      options: ['Mercury', 'Venus', 'Mars', 'Jupiter'],
+      correct: 2
+    },
+    {
+      id: 'q2', type: 'multi',
+      prompt: 'Select all the prime numbers below.',
+      options: ['2', '4', '7', '9', '11'],
+      correct: [0, 2, 4]
+    },
+    {
+      id: 'q3', type: 'fill',
+      prompt: 'The chemical symbol for gold is ___.',
+      accepted: ['au']
+    },
+    {
+      id: 'q4', type: 'single',
+      prompt: "Who wrote 'Romeo and Juliet'?",
+      options: ['Charles Dickens', 'William Shakespeare', 'Mark Twain', 'Jane Austen'],
+      correct: 1
+    },
+    {
+      id: 'q5', type: 'multi',
+      prompt: 'Select all the programming languages below.',
+      options: ['Python', 'HTML', 'JavaScript', 'CSS', 'Java'],
+      correct: [0, 2, 4]
+    },
+    {
+      id: 'q6', type: 'fill',
+      prompt: 'The largest ocean on Earth is the ___ Ocean.',
+      accepted: ['pacific']
+    },
+    {
+      id: 'q7', type: 'single',
+      prompt: 'What is the capital of Japan?',
+      options: ['Seoul', 'Beijing', 'Tokyo', 'Bangkok'],
+      correct: 2
+    },
+    {
+      id: 'q8', type: 'multi',
+      prompt: 'Select all the noble gases below.',
+      options: ['Helium', 'Oxygen', 'Neon', 'Nitrogen', 'Argon'],
+      correct: [0, 2, 4]
+    }
+  ];
+
+  const TYPE_LABEL = { single: 'Single Select', multi: 'Multi Select', fill: 'Fill in the Blank' };
+
+  // ---------- DOM refs ----------
+  const counterEl = document.getElementById('counter');
+  const tallyRow = document.getElementById('tallyRow');
+  const typeBadge = document.getElementById('typeBadge');
+  const promptEl = document.getElementById('prompt');
+  const optionsEl = document.getElementById('options');
+  const paletteEl = document.getElementById('palette');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const quizView = document.getElementById('quizView');
+  const resultsView = document.getElementById('resultsView');
+  const stampEl = document.getElementById('stamp');
+  const gradeEl = document.getElementById('grade');
+  const scoreFracEl = document.getElementById('scoreFrac');
+  const resultMessageEl = document.getElementById('resultMessage');
+  const breakdownEl = document.getElementById('breakdown');
+  const restartBtn = document.getElementById('restartBtn');
+
+  // ---------- State ----------
+  let questions = shuffle([...QUESTIONS]);
+  let index = 0;
+  let answers = {}; // id -> number | number[] | string
+
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function isAnswered(q){
+    const a = answers[q.id];
+    if(a === undefined) return false;
+    if(q.type === 'multi') return Array.isArray(a) && a.length > 0;
+    if(q.type === 'fill') return typeof a === 'string' && a.trim().length > 0;
+    return true;
+  }
+
+  // ---------- Tally (progress) ----------
+  function tallyGroupSVG(n){
+    let lines = '';
+    const spacing = 6;
+    for(let i = 0; i < Math.min(n, 4); i++){
+      const x = 4 + i * spacing;
+      lines += '<line x1="' + x + '" y1="4" x2="' + x + '" y2="24"></line>';
+    }
+    if(n === 5){
+      lines += '<line x1="1" y1="22" x2="25" y2="5"></line>';
+    }
+    return '<svg class="tally-group" viewBox="0 0 28 28" width="26" height="26">' + lines + '</svg>';
+  }
+
+  function renderTally(){
+    const count = questions.filter(isAnswered).length;
+    let html = '';
+    let remaining = count;
+    while(remaining > 0){
+      html += tallyGroupSVG(Math.min(remaining, 5));
+      remaining -= 5;
+    }
+    tallyRow.innerHTML = (html || '<span class="tally-empty">None yet</span>') +
+      '<span class="tally-label">' + count + ' of ' + questions.length + ' answered</span>';
+  }
+
+  // ---------- Render question ----------
+  function renderQuestion(){
+    const q = questions[index];
+    counterEl.textContent = 'Q ' + (index + 1) + ' / ' + questions.length;
+    typeBadge.textContent = TYPE_LABEL[q.type];
+    promptEl.textContent = q.prompt;
+    optionsEl.innerHTML = '';
+
+    if(q.type === 'single'){
+      q.options.forEach((opt, i) => {
+        const selected = answers[q.id] === i;
+        optionsEl.appendChild(buildOption(opt, selected, 'radio', () => {
+          answers[q.id] = i;
+          renderQuestion();
+          renderTally();
+          renderPalette();
+        }));
+      });
+    } else if(q.type === 'multi'){
+      const current = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+      q.options.forEach((opt, i) => {
+        const selected = current.includes(i);
+        optionsEl.appendChild(buildOption(opt, selected, 'checkbox', () => {
+          const set = new Set(Array.isArray(answers[q.id]) ? answers[q.id] : []);
+          if(set.has(i)) set.delete(i); else set.add(i);
+          answers[q.id] = Array.from(set).sort((a,b) => a-b);
+          renderQuestion();
+          renderTally();
+          renderPalette();
+        }));
+      });
+    } else if(q.type === 'fill'){
+      const wrap = document.createElement('div');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'fill-input';
+      input.placeholder = 'Type your answer…';
+      input.value = typeof answers[q.id] === 'string' ? answers[q.id] : '';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.addEventListener('input', () => {
+        answers[q.id] = input.value;
+        renderTally();
+        renderPalette();
+      });
+      const hint = document.createElement('div');
+      hint.className = 'fill-hint';
+      hint.textContent = 'Answers are not case-sensitive.';
+      wrap.appendChild(input);
+      wrap.appendChild(hint);
+      optionsEl.appendChild(wrap);
+      setTimeout(() => input.focus(), 0);
+    }
+
+    prevBtn.disabled = index === 0;
+    nextBtn.textContent = (index === questions.length - 1) ? 'Finish →' : 'Next →';
+  }
+
+  function buildOption(label, selected, markType, onClick){
+    const div = document.createElement('div');
+    div.className = 'option' + (selected ? ' selected' : '');
+    div.setAttribute('role', 'button');
+    div.setAttribute('tabindex', '0');
+
+    const mark = document.createElement('span');
+    mark.className = 'mark ' + markType;
+    mark.textContent = selected ? '✓' : '';
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    div.appendChild(mark);
+    div.appendChild(text);
+    div.addEventListener('click', onClick);
+    div.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onClick(); }
+    });
+    return div;
+  }
+
+  // ---------- Palette ----------
+  function renderPalette(){
+    paletteEl.innerHTML = '';
+    questions.forEach((q, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'dot' + (isAnswered(q) ? ' answered' : '') + (i === index ? ' current' : '');
+      dot.textContent = i + 1;
+      dot.addEventListener('click', () => { index = i; renderQuestion(); renderPalette(); });
+      paletteEl.appendChild(dot);
+    });
+  }
+
+  // ---------- Navigation ----------
+  prevBtn.addEventListener('click', () => {
+    if(index > 0){ index--; renderQuestion(); renderPalette(); }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if(index < questions.length - 1){
+      index++; renderQuestion(); renderPalette();
+    } else {
+      submitQuiz();
+    }
+  });
+
+  submitBtn.addEventListener('click', submitQuiz);
+  restartBtn.addEventListener('click', () => {
+    questions = shuffle([...QUESTIONS]);
+    index = 0;
+    answers = {};
+    resultsView.classList.remove('show');
+    quizView.classList.remove('hide');
+    renderQuestion(); renderPalette(); renderTally();
+  });
+
+  // ---------- Scoring ----------
+  function isCorrect(q){
+    const a = answers[q.id];
+    if(q.type === 'single') return a === q.correct;
+    if(q.type === 'multi'){
+      if(!Array.isArray(a)) return false;
+      const given = [...a].sort((x,y)=>x-y);
+      const correct = [...q.correct].sort((x,y)=>x-y);
+      return given.length === correct.length && given.every((v,i) => v === correct[i]);
+    }
+    if(q.type === 'fill'){
+      if(typeof a !== 'string') return false;
+      const norm = a.trim().toLowerCase();
+      return q.accepted.includes(norm);
+    }
+    return false;
+  }
+
+  function answerText(q){
+    const a = answers[q.id];
+    if(q.type === 'single') return (a === undefined) ? '— no answer —' : q.options[a];
+    if(q.type === 'multi') return (!Array.isArray(a) || !a.length) ? '— no answer —' : a.map(i => q.options[i]).join(', ');
+    if(q.type === 'fill') return (typeof a === 'string' && a.trim()) ? a.trim() : '— no answer —';
+  }
+
+  function correctText(q){
+    if(q.type === 'single') return q.options[q.correct];
+    if(q.type === 'multi') return q.correct.map(i => q.options[i]).join(', ');
+    if(q.type === 'fill') return q.accepted[0];
+  }
+
+  function submitQuiz(){
+    const score = questions.filter(isCorrect).length;
+    const total = questions.length;
+    const pct = (score / total) * 100;
+
+    let grade, message, fail = false;
+    if(pct >= 90){ grade = 'A+'; message = 'Outstanding work!'; }
+    else if(pct >= 80){ grade = 'A'; message = 'Great job!'; }
+    else if(pct >= 70){ grade = 'B'; message = 'Solid effort.'; }
+    else if(pct >= 60){ grade = 'C'; message = 'Not bad — room to grow.'; }
+    else { grade = 'F'; message = 'Worth another attempt.'; fail = true; }
+
+    gradeEl.textContent = grade;
+    scoreFracEl.textContent = score + '/' + total;
+    resultMessageEl.textContent = message;
+    stampEl.classList.toggle('fail', fail);
+
+    breakdownEl.innerHTML = '';
+    questions.forEach((q, i) => {
+      const correct = isCorrect(q);
+      const row = document.createElement('div');
+      row.className = 'review-row';
+      row.innerHTML =
+        '<div class="review-top">' +
+          '<span class="review-icon ' + (correct ? 'correct' : 'wrong') + '">' + (correct ? '✓' : '✕') + '</span>' +
+          '<span class="review-q">' + (i + 1) + '. ' + q.prompt + '</span>' +
+        '</div>' +
+        '<div class="review-detail">' +
+          '<div>Your answer: <span class="your">' + answerText(q) + '</span></div>' +
+          (correct ? '' : '<div>Correct answer: <span class="correct-answer">' + correctText(q) + '</span></div>') +
+        '</div>';
+      breakdownEl.appendChild(row);
+    });
+
+    quizView.classList.add('hide');
+    resultsView.classList.add('show');
+  }
+
+  // ---------- Init ----------
+  renderQuestion();
+  renderPalette();
+  renderTally();
+})();
+</script>
+
+</body>
+</html>
